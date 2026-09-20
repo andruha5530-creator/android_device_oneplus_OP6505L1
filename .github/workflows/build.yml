@@ -58,8 +58,11 @@ jobs:
         run: |
           set -euxo pipefail
           cd "$HOME/fox_12.1"
+          export TOP="$HOME/fox_12.1"
+          test -f "$TOP/build/make/core/envsetup.mk"
+          echo "ANDROID_BUILD_TOP=$TOP"
 
-          echo "=== DEVICE TREE ==="
+          echo "=== DEVICE TREE ===
           sed -n '1,240p' device/oneplus/OP6505L1/AndroidProducts.mk
           sed -n '1,260p' device/oneplus/OP6505L1/omni_OP6505L1.mk
           sed -n '1,320p' device/oneplus/OP6505L1/BoardConfig.mk
@@ -95,7 +98,9 @@ jobs:
       - name: Build recovery
         run: |
           cd "$HOME/fox_12.1"
-          source build/envsetup.sh
+          export TOP="$HOME/fox_12.1"
+          test -f "$TOP/build/make/core/envsetup.mk"
+          source "$TOP/build/envsetup.sh"
           lunch omni_OP6505L1-eng
           mka recoveryimage 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
 
