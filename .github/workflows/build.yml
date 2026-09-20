@@ -13,16 +13,25 @@ jobs:
     - name: Подготовка Linux-окружения
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc zip cpio python3
+        sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc zip cpio python3 git
         
-    - name: Скачивание исходников OrangeFox (Зеркало GitHub)
+    - name: Установка утилиты Google Repo
       run: |
-        mkdir ~/orangefox
-        cd ~/orangefox
-        # Используем официальный инструмент через GitHub репозитории во избежание 403 ошибки
-        git clone https://github.com
-        cd sync
-        ./orangefox_sync.sh --branch 12.1 --path ~/fox_12.1
+        mkdir -p ~/bin
+        curl https://googleapis.com > ~/bin/repo
+        chmod a+x ~/bin/repo
+        sudo ln -sf ~/bin/repo /usr/bin/repo
+
+    - name: Синхронизация исходников OrangeFox через Repo
+      run: |
+        mkdir ~/fox_12.1
+        cd ~/fox_12.1
+        git config --global user.name "andruha5530"
+        git config --global user.email "andruha5530@example.com"
+        # Инициализируем официальный минимальный манифест OrangeFox branch 12.1
+        repo init --depth=1 -u https://gitlab.com -b fox_12.1
+        # Запускаем быстрое скачивание
+        repo sync -c --no-clone-bundle --no-tags -j$(nproc --all)
 
     - name: Клонирование вашего дерева устройства
       run: |
