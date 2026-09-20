@@ -31,5 +31,3 @@ if [ "$1" = "$FDEVICE" ] || [ "$FOX_BUILD_DEVICE" = "$FDEVICE" ]; then
     export ALLOW_MISSING_DEPENDENCIES=true
     export LC_ALL=C
 fi
-
-add_lunch_combo omni_OP6505L1-eng
