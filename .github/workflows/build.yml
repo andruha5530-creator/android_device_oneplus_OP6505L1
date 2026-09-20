@@ -56,17 +56,41 @@ jobs:
 
       - name: Validate device tree
         run: |
+          set -euxo pipefail
           cd "$HOME/fox_12.1"
-          test -f device/oneplus/OP6505L1/AndroidProducts.mk
-          test -f device/oneplus/OP6505L1/omni_OP6505L1.mk
-          test -f device/oneplus/OP6505L1/BoardConfig.mk
-          test -f device/oneplus/OP6505L1/vendorsetup.sh
-          test -f device/oneplus/OP6505L1/recovery/root/system/etc/recovery.fstab
+
+          echo "=== DEVICE TREE ==="
+          sed -n '1,240p' device/oneplus/OP6505L1/AndroidProducts.mk
+          sed -n '1,260p' device/oneplus/OP6505L1/omni_OP6505L1.mk
+          sed -n '1,320p' device/oneplus/OP6505L1/BoardConfig.mk
+          sed -n '1,260p' device/oneplus/OP6505L1/vendorsetup.sh
+
+          echo "=== ENVSETUP ==="
           source build/envsetup.sh
+
+          echo "=== COMMON LUNCH CHOICES ==="
+          TARGET_BUILD_APPS= TARGET_PRODUCT= TARGET_BUILD_VARIANT= get_build_var COMMON_LUNCH_CHOICES || true
+
+          echo "=== LUNCH TRACE ==="
+          set -x
           lunch omni_OP6505L1-eng
+          lunch_rc=$?
+          set +x
+          echo "LUNCH_RC=$lunch_rc"
+
+          echo "=== BUILD VARS ==="
+          get_build_var TARGET_PRODUCT
+          get_build_var TARGET_BUILD_VARIANT
+          get_build_var TARGET_BUILD_TYPE
           get_build_var BOARD_RECOVERYIMAGE_PARTITION_SIZE
           get_build_var BOARD_BOOT_HEADER_VERSION
+          get_build_var BOARD_BOOTIMG_HEADER_VERSION
+          get_build_var BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE
+          get_build_var TARGET_NO_KERNEL
+          get_build_var BOARD_USES_GENERIC_KERNEL_IMAGE
           get_build_var TARGET_RECOVERY_FSTAB
+
+          exit "$lunch_rc"
 
       - name: Build recovery
         run: |
