@@ -1,0 +1,6 @@
+id=winlator_io_boost
+name=Winlator I/O Boost
+version=2.1
+versionCode=21
+author=andruha5530
+description=Universal Winlator storage I/O tuning with automatic package detection, userdata read-ahead tuning and best-effort I/O priority.
