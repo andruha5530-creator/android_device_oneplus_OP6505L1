@@ -1,0 +1,5 @@
+# OnePlus Nord CE 6 (OP6505L1)
+# Dedicated recovery partition / Android 14+ FBE
+
+/dev/block/by-name/userdata /data f2fs rw,discard,fsync_mode=nobarrier,inlinecrypt,fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized+wrappedkey_v0,keydirectory=/metadata/vold/metadata_encryption,metadata_encryption=aes-256-xts:wrappedkey_v0
+/dev/block/by-name/metadata /metadata ext4 rw
