@@ -13,13 +13,14 @@ jobs:
     - name: Подготовка Linux-окружения
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc zip cpio
+        sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc zip cpio python3
         
-    - name: Скачивание исходников OrangeFox
+    - name: Скачивание исходников OrangeFox (Зеркало GitHub)
       run: |
         mkdir ~/orangefox
         cd ~/orangefox
-        git clone https://gitlab.com
+        # Используем официальный инструмент через GitHub репозитории во избежание 403 ошибки
+        git clone https://github.com
         cd sync
         ./orangefox_sync.sh --branch 12.1 --path ~/fox_12.1
 
