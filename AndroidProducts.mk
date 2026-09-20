@@ -2,4 +2,4 @@ PRODUCT_MAKEFILES := \
     $(LOCAL_DIR)/omni_OP6505L1.mk
 
 COMMON_LUNCH_CHOICES := \
-    omni_OP6505L1-eng
+    twrp_OP6505L1-eng
