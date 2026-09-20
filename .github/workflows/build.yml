@@ -32,6 +32,12 @@ jobs:
 
       - name: Sync OrangeFox 12.1
         run: |
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
+          chmod a+x "$HOME/bin/repo"
+          export PATH="$HOME/bin:$PATH"
+          repo --version
+
           git clone --depth=1 https://gitlab.com/OrangeFox/sync.git "$HOME/OrangeFox_sync"
           chmod +x "$HOME/OrangeFox_sync/orangefox_sync.sh"
           mkdir -p "$GITHUB_WORKSPACE/patches"
