@@ -34,6 +34,9 @@ jobs:
         run: |
           git clone --depth=1 https://gitlab.com/OrangeFox/sync.git "$HOME/OrangeFox_sync"
           chmod +x "$HOME/OrangeFox_sync/orangefox_sync.sh"
+          mkdir -p "$GITHUB_WORKSPACE/patches"
+          cp "$HOME/OrangeFox_sync/patches/patch-manifest-fox_12.1.diff" "$GITHUB_WORKSPACE/patches/patch-manifest-fox_12.1.diff"
+          cd "$GITHUB_WORKSPACE"
           "$HOME/OrangeFox_sync/orangefox_sync.sh" --branch 12.1 --path "$HOME/fox_12.1"
           df -h "$HOME/fox_12.1"
 
