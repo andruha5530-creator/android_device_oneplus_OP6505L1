@@ -11,16 +11,8 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Reclaim disk space
-        uses: insightsengineering/disk-space-reclaimer@v1
-        with:
-          tools-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Show runner
         run: |
@@ -30,13 +22,18 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses5 libncurses5-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools unzip xsltproc zip zlib1g-dev python3 openjdk-11-jdk
+          sudo apt-get install -y \
+            bc bison build-essential ccache curl flex fontconfig gperf \
+            git gnupg imagemagick lib32z1-dev libc6-dev-i386 \
+            libgl1-mesa-dev liblz4-tool libssl-dev libxml2-utils \
+            libx11-dev lzop openjdk-11-jdk pngcrush python3 rsync \
+            schedtool squashfs-tools unzip xsltproc zip zlib1g-dev
           df -h
 
       - name: Sync OrangeFox 12.1
         run: |
-          mkdir -p "$HOME/OrangeFox_sync"
           git clone --depth=1 https://gitlab.com/OrangeFox/sync.git "$HOME/OrangeFox_sync"
+          chmod +x "$HOME/OrangeFox_sync/orangefox_sync.sh"
           "$HOME/OrangeFox_sync/orangefox_sync.sh" --branch 12.1 --path "$HOME/fox_12.1"
           df -h "$HOME/fox_12.1"
 
@@ -51,6 +48,7 @@ jobs:
           test -f device/oneplus/OP6505L1/AndroidProducts.mk
           test -f device/oneplus/OP6505L1/omni_OP6505L1.mk
           test -f device/oneplus/OP6505L1/BoardConfig.mk
+          test -f device/oneplus/OP6505L1/vendorsetup.sh
           test -f device/oneplus/OP6505L1/recovery/root/system/etc/recovery.fstab
           source build/envsetup.sh
           lunch omni_OP6505L1-eng
@@ -58,23 +56,26 @@ jobs:
           get_build_var BOARD_BOOT_HEADER_VERSION
           get_build_var TARGET_RECOVERY_FSTAB
 
-      - name: Build recovery.img
+      - name: Build recovery
         run: |
           cd "$HOME/fox_12.1"
           source build/envsetup.sh
           lunch omni_OP6505L1-eng
-          mka adbd recoveryimage
+          mka recoveryimage 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
 
       - name: Verify recovery image
         run: |
-          IMG="$HOME/fox_12.1/out/target/product/OP6505L1/recovery.img"
-          test -f "$IMG"
-          ls -lh "$IMG"
-          file "$IMG"
+          OUT="$HOME/fox_12.1/out/target/product/OP6505L1"
+          find "$OUT" -maxdepth 1 -type f -name '*recovery*.img' -ls
+          test -f "$OUT/recovery.img"
+          ls -lh "$OUT/recovery.img"
+          file "$OUT/recovery.img"
 
       - name: Upload recovery
         uses: actions/upload-artifact@v4
         with:
           name: OrangeFox-OnePlus-Nord-CE-6-OP6505L1
-          path: ~/fox_12.1/out/target/product/OP6505L1/recovery.img
+          path: |
+            ~/fox_12.1/out/target/product/OP6505L1/recovery.img
+            build.log
           if-no-files-found: error
