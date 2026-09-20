@@ -25,9 +25,9 @@ jobs:
           sudo apt-get install -y \
             bc bison build-essential ccache curl flex fontconfig gperf \
             git gnupg imagemagick lib32z1-dev libc6-dev-i386 \
-            libgl1-mesa-dev liblz4-tool libssl-dev libxml2-utils \
-            libx11-dev lzop openjdk-11-jdk pngcrush python3 rsync \
-            schedtool squashfs-tools unzip xsltproc zip zlib1g-dev
+            libgl1-mesa-dev libssl-dev libxml2-utils libx11-dev \
+            lzop openjdk-11-jdk pngcrush python3 rsync schedtool \
+            squashfs-tools unzip xsltproc zip zlib1g-dev
           df -h
 
       - name: Sync OrangeFox 12.1
@@ -41,7 +41,10 @@ jobs:
           git clone --depth=1 https://gitlab.com/OrangeFox/sync.git "$HOME/OrangeFox_sync"
           chmod +x "$HOME/OrangeFox_sync/orangefox_sync.sh"
           mkdir -p "$GITHUB_WORKSPACE/patches"
-          cp "$HOME/OrangeFox_sync/patches/patch-manifest-fox_12.1.diff" "$GITHUB_WORKSPACE/patches/patch-manifest-fox_12.1.diff"
+          cp "$HOME/OrangeFox_sync"/patches/patch-*-fox_12.1.diff "$GITHUB_WORKSPACE/patches/"
+          ls -lh "$GITHUB_WORKSPACE/patches/"
+          test -f "$GITHUB_WORKSPACE/patches/patch-manifest-fox_12.1.diff"
+          test -f "$GITHUB_WORKSPACE/patches/patch-update-engine-fox_12.1.diff"
           cd "$GITHUB_WORKSPACE"
           "$HOME/OrangeFox_sync/orangefox_sync.sh" --branch 12.1 --path "$HOME/fox_12.1"
           df -h "$HOME/fox_12.1"
@@ -75,7 +78,6 @@ jobs:
       - name: Verify recovery image
         run: |
           OUT="$HOME/fox_12.1/out/target/product/OP6505L1"
-          find "$OUT" -maxdepth 1 -type f -name '*recovery*.img' -ls
           test -f "$OUT/recovery.img"
           ls -lh "$OUT/recovery.img"
           file "$OUT/recovery.img"
