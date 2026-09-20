@@ -14,21 +14,32 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip bc zip cpio python3 git curl
-
-    - name: Прямое скачивание исходников OrangeFox
+        
+    - name: Установка утилиты Google Repo (Проверенный источник)
       run: |
-        cd ~
+        mkdir -p ~/bin
+        # Скачиваем скрипт напрямую из официального хранилища AOSP (Google Storage)
+        curl https://googleapis.com > ~/bin/repo
+        chmod a+x ~/bin/repo
+        sudo ln -sf ~/bin/repo /usr/bin/repo
+
+    - name: Синхронизация исходников OrangeFox (Через GitHub-манифест)
+      run: |
+        mkdir ~/fox_12.1
+        cd ~/fox_12.1
         git config --global user.name "andruha5530"
         git config --global user.email "andruha5530@example.com"
-        # Скачиваем стабильную ветку Fox напрямую через Git (без утилиты repo)
-        git clone --depth=1 https://github.com -b fox_12.1 ~/fox_12.1
+        # Инициализируем манифест через официальное GitHub-зеркало OrangeFox (минуя GitLab)
+        repo init --depth=1 -u https://github.com -b fox_12.1
+        # Скачиваем только необходимые слои исходников для ускорения процесса
+        repo sync -c --no-clone-bundle --no-tags -j$(nproc --all)
 
     - name: Клонирование вашего дерева устройства
       run: |
         cd ~/fox_12.1/device
         mkdir -p oneplus
         cd oneplus
-        # Подтягиваем созданные вами .mk файлы из текущего репозитория
+        # Подтягиваем созданное вами дерево OP6505L1
         git clone https://github.com{{ github.repository_owner }}/android_device_oneplus_OP6505L1.git OP6505L1
 
     - name: Компиляция OrangeFox Recovery
