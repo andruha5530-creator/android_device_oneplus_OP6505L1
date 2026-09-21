@@ -56,7 +56,7 @@ jobs:
 
       - name: Validate device tree
         run: |
-          set -exo pipefail
+          set -eo pipefail
           cd "$HOME/fox_12.1"
           export TOP="$HOME/fox_12.1"
           test -f "$TOP/build/make/core/envsetup.mk"
@@ -69,7 +69,16 @@ jobs:
           sed -n '1,260p' device/oneplus/OP6505L1/vendorsetup.sh
 
           echo "=== ENVSETUP ==="
+          set +e
           source build/envsetup.sh
+          envsetup_rc=$?
+          set -e
+          echo "ENVSETUP_RC=$envsetup_rc"
+          if [ "$envsetup_rc" -ne 0 ]; then
+            echo "envsetup.sh failed; printing shell/build context"
+            printf "TOP=%s\nANDROID_BUILD_TOP=%s\nBASH_VERSION=%s\n" "${TOP:-}" "${ANDROID_BUILD_TOP:-}" "${BASH_VERSION:-}"
+            exit "$envsetup_rc"
+          fi
 
           echo "=== COMMON LUNCH CHOICES ==="
           TARGET_BUILD_APPS= TARGET_PRODUCT= TARGET_BUILD_VARIANT= get_build_var COMMON_LUNCH_CHOICES || true
@@ -93,6 +102,13 @@ jobs:
           get_build_var BOARD_USES_GENERIC_KERNEL_IMAGE
           get_build_var TARGET_RECOVERY_FSTAB
 
+          if [ "$lunch_rc" -ne 0 ]; then
+            echo "=== LUNCH FAILED: DUMPING AVAILABLE PRODUCTS ==="
+            TARGET_BUILD_APPS= TARGET_PRODUCT= TARGET_BUILD_VARIANT= get_build_var COMMON_LUNCH_CHOICES || true
+            echo "=== LUNCH FAILURE CONTEXT ==="
+            get_build_var PRODUCT_MAKEFILES || true
+            get_build_var COMMON_LUNCH_CHOICES || true
+          fi
           exit "$lunch_rc"
 
       - name: Build recovery
