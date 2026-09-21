@@ -135,7 +135,7 @@ jobs:
       - name: Diagnose root/vendor conflict
         if: always()
         run: |
-          set -u
+          set +u
           cd "$HOME/twrp-12.1"
 
           export TOP="$HOME/twrp-12.1"
