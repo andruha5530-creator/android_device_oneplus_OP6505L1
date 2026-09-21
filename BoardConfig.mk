@@ -10,7 +10,6 @@ TARGET_SCREEN_DENSITY := 450
 TARGET_SCREEN_HEIGHT := 2772
 TARGET_SCREEN_WIDTH := 1272
 
-OF_MAINTAINER := "andruha5530"
 TW_EXCLUDE_APEX := true
 
 # Display / brightness (Qualcomm panel scale)
