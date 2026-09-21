@@ -84,10 +84,12 @@ jobs:
           TARGET_BUILD_APPS= TARGET_PRODUCT= TARGET_BUILD_VARIANT= get_build_var COMMON_LUNCH_CHOICES || true
 
           echo "=== LUNCH TRACE ==="
+          set +e
           set -x
           lunch omni_OP6505L1-eng
           lunch_rc=$?
           set +x
+          set -e
           echo "LUNCH_RC=$lunch_rc"
 
           echo "=== BUILD VARS ==="
