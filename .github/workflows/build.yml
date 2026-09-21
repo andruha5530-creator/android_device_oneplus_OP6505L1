@@ -77,13 +77,46 @@ jobs:
 
       - name: Build TWRP recovery
         run: |
+          set -o pipefail
           cd "$HOME/twrp-12.1"
           export TOP="$HOME/twrp-12.1"
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
           source "$TOP/build/envsetup.sh"
           lunch twrp_OP6505L1-eng
-          mka recoveryimage -j2 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+
+          OUT="$TOP/out/target/product/OP6505L1"
+          LOG="$GITHUB_WORKSPACE/build.log"
+
+          echo "=== TWRP BUILD (PASS 1) ==="
+          set +e
+          mka recoveryimage -j2 2>&1 | tee "$LOG"
+          status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+
+          # TWRP 12.1 currently has an open issue for this exact rsync
+          # failure. The recovery build can leave root/vendor as a directory
+          # while the next packaging step expects the vendor symlink.
+          # Match the minimal workaround used by other recovery builds:
+          # remove only the conflicting generated directory and rerun the
+          # failed recovery packaging target.
+          if grep -qE 'could not make way for new symlink: root/vendor|cannot delete non-empty directory: root/vendor' "$LOG"; then
+            echo "=== DETECTED root/vendor SYMLINK CONFLICT ==="
+            rm -rf "$OUT/recovery/root/vendor"
+
+            echo "=== RETRY RECOVERY RAMDISK PACKAGING ==="
+            ninja -C "$TOP" "$OUT/obj/PACKAGING/recovery_intermediates/ramdisk_files-timestamp" 2>&1 | tee -a "$LOG"
+
+            echo "=== RETRY TWRP RECOVERY IMAGE ==="
+            mka recoveryimage -j2 2>&1 | tee -a "$LOG"
+            exit ${PIPESTATUS[0]}
+          fi
+
+          exit "$status"
 
       - name: Verify recovery image
         run: |
