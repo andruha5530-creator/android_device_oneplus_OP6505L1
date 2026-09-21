@@ -45,15 +45,13 @@ BOARD_RECOVERYIMAGE_PARTITION_SIZE := 104857600
 BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE := 100663296
 BOARD_DTBOIMG_PARTITION_SIZE := 25165824
 
-# Match the stock layout: vendor/product/system_ext/odm are separate images.
-BOARD_USES_VENDORIMAGE := true
-BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE := ext4
-BOARD_USES_ODMIMAGE := true
-BOARD_ODMIMAGE_FILE_SYSTEM_TYPE := ext4
-BOARD_USES_PRODUCTIMAGE := true
-BOARD_PRODUCTIMAGE_FILE_SYSTEM_TYPE := ext4
-BOARD_USES_SYSTEM_EXTIMAGE := true
-BOARD_SYSTEM_EXTIMAGE_FILE_SYSTEM_TYPE := ext4
+# OP6505L1 uses separate dynamic vendor/product/system_ext/odm partitions.
+# Setting the copy-out paths lets the Android build system derive the
+# corresponding image configuration without forcing a filesystem type.
+TARGET_COPY_OUT_VENDOR := vendor
+TARGET_COPY_OUT_ODM := odm
+TARGET_COPY_OUT_PRODUCT := product
+TARGET_COPY_OUT_SYSTEM_EXT := system_ext
 
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
