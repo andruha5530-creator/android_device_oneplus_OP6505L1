@@ -23,6 +23,10 @@ if [ "${FOX_BUILD_DEVICE:-}" = "$FDEVICE" ]; then
     export FOX_AB_DEVICE=1
     export FOX_VIRTUAL_AB_DEVICE=1
     export OF_AB_DEVICE_WITH_RECOVERY_PARTITION=1
+    # OrangeFox 12.1 workaround for the recovery ramdisk vendor symlink conflict.
+    # The build fails with "cannot delete non-empty directory: root/vendor"
+    # after Android has populated recovery/root/vendor before final rsync.
+    export OF_MANUAL_ROOT_VENDOR_ERROR_FIX=1
 
     export FOX_VANILLA_BUILD=1
     export FOX_USE_LZ4_BINARY=1
