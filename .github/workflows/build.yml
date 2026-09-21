@@ -66,14 +66,24 @@ jobs:
           lunch twrp_OP6505L1-eng
 
           echo "=== BUILD VARS ==="
-          get_build_var TARGET_PRODUCT
-          get_build_var TARGET_BUILD_VARIANT
-          get_build_var BOARD_RECOVERYIMAGE_PARTITION_SIZE
-          get_build_var BOARD_BOOT_HEADER_VERSION
-          get_build_var BOARD_KERNEL_PAGESIZE
-          get_build_var BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE
-          get_build_var BOARD_USES_GENERIC_KERNEL_IMAGE
-          get_build_var TARGET_RECOVERY_FSTAB
+          for v in \
+            TARGET_PRODUCT \
+            TARGET_BUILD_VARIANT \
+            BOARD_RECOVERYIMAGE_PARTITION_SIZE \
+            BOARD_BOOT_HEADER_VERSION \
+            BOARD_KERNEL_PAGESIZE \
+            BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE \
+            BOARD_USES_GENERIC_KERNEL_IMAGE \
+            BOARD_USES_VENDORIMAGE \
+            BOARD_BUILD_SYSTEM_ROOT_IMAGE \
+            TARGET_OUT_VENDOR \
+            TARGET_ROOT_OUT \
+            TARGET_RECOVERY_ROOT_OUT \
+            TARGET_RECOVERY_FSTAB
+          do
+            echo "--- $v ---"
+            get_build_var "$v" 2>&1 || true
+          done
 
       - name: Build TWRP recovery
         run: |
@@ -88,7 +98,28 @@ jobs:
           OUT="$TOP/out/target/product/OP6505L1"
           LOG="$GITHUB_WORKSPACE/build.log"
 
-          echo "=== TWRP BUILD (PASS 1) ==="
+          echo "=== PRE-BUILD VENDOR STATE ==="
+          for p in \
+            "$OUT/vendor" \
+            "$OUT/system/vendor" \
+            "$OUT/root/vendor" \
+            "$OUT/recovery/vendor" \
+            "$OUT/recovery/root/vendor"
+          do
+            echo "--- $p ---"
+            if [ -L "$p" ]; then
+              echo "SYMLINK -> $(readlink "$p")"
+            elif [ -d "$p" ]; then
+              echo "DIRECTORY"
+              find "$p" -maxdepth 2 -printf '%y %p -> %l\n' 2>/dev/null | head -100 || true
+            elif [ -e "$p" ]; then
+              echo "FILE"
+            else
+              echo "ABSENT"
+            fi
+          done
+
+          echo "=== TWRP BUILD ==="
           set +e
           mka recoveryimage -j2 2>&1 | tee "$LOG"
           status=${PIPESTATUS[0]}
@@ -98,34 +129,143 @@ jobs:
             exit 0
           fi
 
-          if grep -qE 'could not make way for new symlink: root/vendor|cannot delete non-empty directory: root/vendor' "$LOG"; then
-            echo "=== DETECTED root/vendor SYMLINK CONFLICT ==="
-            rm -rf "$OUT/recovery/root/vendor"
-
-            echo "=== RETRY RECOVERY RAMDISK PACKAGING ==="
-            ninja "$OUT/obj/PACKAGING/recovery_intermediates/ramdisk_files-timestamp" 2>&1 | tee -a "$LOG"
-            retry_status=${PIPESTATUS[0]}
-            if [ "$retry_status" -ne 0 ]; then
-              echo "ERROR: recovery ramdisk packaging retry failed"
-              exit "$retry_status"
-            fi
-
-            echo "=== RETRY TWRP RECOVERY IMAGE ==="
-            set +e
-            mka recoveryimage -j2 2>&1 | tee -a "$LOG"
-            retry_status=${PIPESTATUS[0]}
-            set -e
-            exit "$retry_status"
-          fi
-
+          echo "=== BUILD FAILED: PRESERVING ROOT/VENDOR STATE ==="
           exit "$status"
 
+      - name: Diagnose root/vendor conflict
+        if: always()
+        run: |
+          set -u
+          cd "$HOME/twrp-12.1"
+
+          export TOP="$HOME/twrp-12.1"
+          export ALLOW_MISSING_DEPENDENCIES=true
+          export LC_ALL=C
+
+          source "$TOP/build/envsetup.sh"
+          lunch twrp_OP6505L1-eng >/dev/null 2>&1 || true
+
+          OUT="$TOP/out/target/product/OP6505L1"
+          DIAG="$GITHUB_WORKSPACE/root-vendor-diagnosis.log"
+
+          {
+            echo "=================================================="
+            echo " ROOT/VENDOR CONFLICT DIAGNOSTICS"
+            echo "=================================================="
+            date
+            echo
+
+            echo "=== DEVICE TREE COMMIT ==="
+            git -C "$TOP/device/oneplus/OP6505L1" rev-parse HEAD 2>&1 || true
+            echo
+
+            echo "=== BUILD VARIABLES ==="
+            for v in \
+              BOARD_USES_VENDORIMAGE \
+              BOARD_BUILD_SYSTEM_ROOT_IMAGE \
+              BOARD_USES_GENERIC_KERNEL_IMAGE \
+              BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE \
+              BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT \
+              BOARD_INCLUDE_RECOVERY_RAMDISK_IN_VENDOR_BOOT \
+              BUILDING_VENDOR_BOOT_IMAGE \
+              TARGET_OUT \
+              TARGET_OUT_VENDOR \
+              TARGET_ROOT_OUT \
+              TARGET_RECOVERY_OUT \
+              TARGET_RECOVERY_ROOT_OUT \
+              TARGET_VENDOR_RAMDISK_OUT \
+              PRODUCT_OUT
+            do
+              echo "--- $v ---"
+              get_build_var "$v" 2>&1 || true
+            done
+            echo
+
+            echo "=== GENERATED VENDOR PATHS ==="
+            for p in \
+              "$OUT/vendor" \
+              "$OUT/system/vendor" \
+              "$OUT/root/vendor" \
+              "$OUT/recovery/vendor" \
+              "$OUT/recovery/root/vendor"
+            do
+              echo "--- $p ---"
+              if [ -L "$p" ]; then
+                echo "TYPE=SYMLINK"
+                echo "TARGET=$(readlink "$p")"
+                ls -lad "$p" || true
+              elif [ -d "$p" ]; then
+                echo "TYPE=DIRECTORY"
+                ls -lad "$p" || true
+                find "$p" -maxdepth 3 -printf '%y %p -> %l\n' 2>/dev/null | head -200 || true
+              elif [ -e "$p" ]; then
+                echo "TYPE=FILE"
+                ls -la "$p" || true
+              else
+                echo "TYPE=ABSENT"
+              fi
+            done
+            echo
+
+            echo "=== ALL VENDOR OBJECTS UNDER PRODUCT OUT ==="
+            find "$OUT" \( -type d -o -type l \) -path '*/vendor*' \
+              -printf '%y %p -> %l\n' 2>/dev/null | sort | head -1000 || true
+            echo
+
+            echo "=== DEVICE TREE VENDOR REFERENCES ==="
+            grep -RInE 'vendor|BOARD_USES_VENDOR|TARGET_OUT_VENDOR|create-vendor' \
+              "$TOP/device/oneplus/OP6505L1" --exclude-dir=.git \
+              2>/dev/null | head -500 || true
+            echo
+
+            echo "=== BUILD/MAKE VENDOR-SYMLINK RULES ==="
+            grep -RInE 'create-vendor-odm-symlink|create-system-vendor-symlink|root/vendor|TARGET_OUT_VENDOR|TARGET_RECOVERY_ROOT_OUT' \
+              "$TOP/build/make/core" "$TOP/build/make" \
+              2>/dev/null | head -1000 || true
+            echo
+
+            echo "=== GENERATED BUILD FILE REFERENCES ==="
+            find "$TOP/out" -type f \
+              \( -name '*.ninja' -o -name '*.mk' -o -name '*.sh' -o -name '*.rsp' \) \
+              -print0 2>/dev/null | \
+              xargs -0 grep -IlE 'root/vendor|recovery/root/vendor|create-vendor-odm-symlink|TARGET_OUT_VENDOR' \
+              2>/dev/null | head -300 | while read -r f; do
+                echo "--- $f ---"
+                grep -nE 'root/vendor|recovery/root/vendor|create-vendor-odm-symlink|TARGET_OUT_VENDOR' \
+                  "$f" 2>/dev/null | head -100 || true
+              done
+            echo
+
+            echo "=== RECOVERY PACKAGING INTERMEDIATES ==="
+            find "$OUT/obj/PACKAGING" -maxdepth 5 -type f \
+              -printf '%p\n' 2>/dev/null | sort | head -500 || true
+            echo
+
+            echo "=== RECOVERY ROOT TREE ==="
+            if [ -d "$OUT/recovery/root" ]; then
+              find "$OUT/recovery/root" -maxdepth 4 \
+                -printf '%y %p -> %l\n' 2>/dev/null | sort | head -1000 || true
+            fi
+            echo
+
+            echo "=================================================="
+            echo " END ROOT/VENDOR DIAGNOSTICS"
+            echo "=================================================="
+          } 2>&1 | tee "$DIAG"
+
       - name: Verify recovery image
+        if: always()
         run: |
           OUT="$HOME/twrp-12.1/out/target/product/OP6505L1"
-          test -f "$OUT/recovery.img"
+
+          if [ ! -f "$OUT/recovery.img" ]; then
+            echo "recovery.img was not produced."
+            exit 1
+          fi
+
           ls -lh "$OUT/recovery.img"
           file "$OUT/recovery.img"
+
           python3 - "$OUT/recovery.img" <<'PY'
           import struct, sys
           p=sys.argv[1]
@@ -138,11 +278,13 @@ jobs:
           print("header_size=", struct.unpack_from("<I", d, 1648)[0] if len(d) >= 1652 else "n/a")
           PY
 
-      - name: Upload TWRP recovery
+      - name: Upload TWRP diagnostics and recovery
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: TWRP-OnePlus-Nord-CE-6-OP6505L1
+          name: TWRP-OnePlus-Nord-CE-6-OP6505L1-diagnostics
           path: |
-            ~/twrp-12.1/out/target/product/OP6505L1/recovery.img
             build.log
-          if-no-files-found: error
+            root-vendor-diagnosis.log
+            ~/twrp-12.1/out/target/product/OP6505L1/recovery.img
+          if-no-files-found: warn
