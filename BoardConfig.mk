@@ -25,6 +25,9 @@ TW_USE_FSCRYPT_POLICY := 2
 BOARD_USES_METADATA_PARTITION := true
 
 # Android 14 / GKI / boot header v4.
+TARGET_KERNEL_ARCH := arm64
+TARGET_KERNEL_HEADER_ARCH := arm64
+BOARD_KERNEL_IMAGE_NAME := Image
 # The stock recovery image is ramdisk-only, while the kernel is supplied
 # separately by the GKI boot image. Let the build system enter the recovery
 # image path, then explicitly omit the kernel from recovery.img.
