@@ -20,11 +20,15 @@ BOARD_USES_QCOM_FBE_DECRYPTION := true
 TW_USE_FSCRYPT_POLICY := 2
 BOARD_USES_METADATA_PARTITION := true
 
+# Android 14 / GKI / boot header v4.
+# The stock recovery image is ramdisk-only, while the kernel is supplied
+# separately by the GKI boot image. Let the build system enter the recovery
+# image path, then explicitly omit the kernel from recovery.img.
+BOARD_USES_GENERIC_KERNEL_IMAGE := true
 BOARD_BOOT_HEADER_VERSION := 4
 BOARD_BOOTIMG_HEADER_VERSION := 4
 BOARD_KERNEL_PAGESIZE := 4096
 BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE := true
-TARGET_NO_KERNEL := true
 
 BOARD_BOOTIMAGE_PARTITION_SIZE := 104857600
 BOARD_RECOVERYIMAGE_PARTITION_SIZE := 104857600
