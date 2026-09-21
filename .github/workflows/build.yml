@@ -1,8 +1,8 @@
-name: OrangeFox Recovery Compiler
+name: TWRP Recovery Compiler
 
 on:
   push:
-    branches: [ main ]
+    branches: [ twrp-build ]
   workflow_dispatch:
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
             squashfs-tools unzip xsltproc zip zlib1g-dev
           df -h
 
-      - name: Sync OrangeFox 12.1
+      - name: Sync TWRP 12.1
         run: |
           mkdir -p "$HOME/bin"
           curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
@@ -38,111 +38,76 @@ jobs:
           export PATH="$HOME/bin:$PATH"
           repo --version
 
-          git clone --depth=1 https://gitlab.com/OrangeFox/sync.git "$HOME/OrangeFox_sync"
-          chmod +x "$HOME/OrangeFox_sync/orangefox_sync.sh"
-          mkdir -p "$GITHUB_WORKSPACE/patches"
-          cp "$HOME/OrangeFox_sync"/patches/patch-*-fox_12.1.diff "$GITHUB_WORKSPACE/patches/"
-          ls -lh "$GITHUB_WORKSPACE/patches/"
-          test -f "$GITHUB_WORKSPACE/patches/patch-manifest-fox_12.1.diff"
-          test -f "$GITHUB_WORKSPACE/patches/patch-update-engine-fox_12.1.diff"
-          cd "$GITHUB_WORKSPACE"
-          "$HOME/OrangeFox_sync/orangefox_sync.sh" --branch 12.1 --path "$HOME/fox_12.1"
-          df -h "$HOME/fox_12.1"
+          mkdir -p "$HOME/twrp-12.1"
+          cd "$HOME/twrp-12.1"
+          repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1
+          repo sync -j2 --force-sync --no-clone-bundle --no-tags
 
       - name: Add device tree
         run: |
-          mkdir -p "$HOME/fox_12.1/device/oneplus"
-          git clone --depth=1 "https://github.com/$GITHUB_REPOSITORY.git" "$HOME/fox_12.1/device/oneplus/OP6505L1"
+          mkdir -p "$HOME/twrp-12.1/device/oneplus"
+          git clone --depth=1 --branch twrp-build "https://github.com/$GITHUB_REPOSITORY.git" "$HOME/twrp-12.1/device/oneplus/OP6505L1"
 
-      - name: Validate device tree
+      - name: Validate TWRP device tree
         run: |
           set -eo pipefail
-          cd "$HOME/fox_12.1"
-          export TOP="$HOME/fox_12.1"
+          cd "$HOME/twrp-12.1"
+          export TOP="$HOME/twrp-12.1"
+          export ALLOW_MISSING_DEPENDENCIES=true
+          export LC_ALL=C
+
           test -f "$TOP/build/make/core/envsetup.mk"
-          echo "ANDROID_BUILD_TOP=$TOP"
-
           echo "=== DEVICE TREE ==="
-          sed -n '1,240p' device/oneplus/OP6505L1/AndroidProducts.mk
-          sed -n '1,260p' device/oneplus/OP6505L1/omni_OP6505L1.mk
+          sed -n '1,260p' device/oneplus/OP6505L1/AndroidProducts.mk
           sed -n '1,320p' device/oneplus/OP6505L1/BoardConfig.mk
-          sed -n '1,260p' device/oneplus/OP6505L1/vendorsetup.sh
+          sed -n '1,260p' device/oneplus/OP6505L1/twrp_OP6505L1.mk
 
-          echo "=== ENVSETUP ==="
-          set +e
-          set -x
           source build/envsetup.sh
-          envsetup_rc=$?
-          set +x
-          set -e
-          echo "ENVSETUP_RC=$envsetup_rc"
-          printf "TOP=%s\nANDROID_BUILD_TOP=%s\nBASH_VERSION=%s\n" "${TOP:-}" "${ANDROID_BUILD_TOP:-}" "${BASH_VERSION:-}"
-          if ! declare -F lunch >/dev/null 2>&1; then
-            echo "ERROR: lunch function was not loaded by envsetup.sh"
-            exit "$envsetup_rc"
-          fi
-
-          echo "=== COMMON LUNCH CHOICES ==="
-          TARGET_BUILD_APPS= TARGET_PRODUCT= TARGET_BUILD_VARIANT= get_build_var COMMON_LUNCH_CHOICES || true
-
-          echo "=== LUNCH TRACE ==="
-          set +e
-          set -x
-          lunch omni_OP6505L1-eng
-          lunch_rc=$?
-          set +x
-          set -e
-          echo "LUNCH_RC=$lunch_rc"
+          lunch twrp_OP6505L1-eng
 
           echo "=== BUILD VARS ==="
           get_build_var TARGET_PRODUCT
           get_build_var TARGET_BUILD_VARIANT
-          get_build_var TARGET_BUILD_TYPE
           get_build_var BOARD_RECOVERYIMAGE_PARTITION_SIZE
           get_build_var BOARD_BOOT_HEADER_VERSION
-          get_build_var BOARD_BOOTIMG_HEADER_VERSION
+          get_build_var BOARD_KERNEL_PAGESIZE
           get_build_var BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE
-          get_build_var TARGET_NO_KERNEL
           get_build_var BOARD_USES_GENERIC_KERNEL_IMAGE
           get_build_var TARGET_RECOVERY_FSTAB
 
-          if [ "$lunch_rc" -ne 0 ]; then
-            echo "=== LUNCH FAILED: DUMPING AVAILABLE PRODUCTS ==="
-            TARGET_BUILD_APPS= TARGET_PRODUCT= TARGET_BUILD_VARIANT= get_build_var COMMON_LUNCH_CHOICES || true
-            echo "=== LUNCH FAILURE CONTEXT ==="
-            get_build_var PRODUCT_MAKEFILES || true
-            get_build_var COMMON_LUNCH_CHOICES || true
-          fi
-          exit "$lunch_rc"
-
-      - name: Build recovery
+      - name: Build TWRP recovery
         run: |
-          cd "$HOME/fox_12.1"
-          export TOP="$HOME/fox_12.1"
-          test -f "$TOP/build/make/core/envsetup.mk"
-          set +e
-          set -x
+          cd "$HOME/twrp-12.1"
+          export TOP="$HOME/twrp-12.1"
+          export ALLOW_MISSING_DEPENDENCIES=true
+          export LC_ALL=C
           source "$TOP/build/envsetup.sh"
-          envsetup_rc=$?
-          set +x
-          set -e
-          echo "ENVSETUP_RC=$envsetup_rc"
-          declare -F lunch
-          lunch omni_OP6505L1-eng
-          mka recoveryimage 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+          lunch twrp_OP6505L1-eng
+          mka recoveryimage -j2 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
 
       - name: Verify recovery image
         run: |
-          OUT="$HOME/fox_12.1/out/target/product/OP6505L1"
+          OUT="$HOME/twrp-12.1/out/target/product/OP6505L1"
           test -f "$OUT/recovery.img"
           ls -lh "$OUT/recovery.img"
           file "$OUT/recovery.img"
+          python3 - "$OUT/recovery.img" <<'PY'
+          import struct, sys
+          p=sys.argv[1]
+          d=open(p,'rb').read(4096)
+          if d[:8] != b'ANDROID!':
+              raise SystemExit("ERROR: not an Android boot image")
+          print("kernel_size=", struct.unpack_from("<I", d, 8)[0])
+          print("ramdisk_size=", struct.unpack_from("<I", d, 16)[0])
+          print("header_version=", struct.unpack_from("<I", d, 40)[0])
+          print("header_size=", struct.unpack_from("<I", d, 1648)[0] if len(d) >= 1652 else "n/a")
+          PY
 
-      - name: Upload recovery
+      - name: Upload TWRP recovery
         uses: actions/upload-artifact@v4
         with:
-          name: OrangeFox-OnePlus-Nord-CE-6-OP6505L1
+          name: TWRP-OnePlus-Nord-CE-6-OP6505L1
           path: |
-            ~/fox_12.1/out/target/product/OP6505L1/recovery.img
+            ~/twrp-12.1/out/target/product/OP6505L1/recovery.img
             build.log
           if-no-files-found: error
