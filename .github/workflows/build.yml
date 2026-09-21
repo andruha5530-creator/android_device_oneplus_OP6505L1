@@ -56,7 +56,7 @@ jobs:
 
       - name: Validate device tree
         run: |
-          set -euxo pipefail
+          set -exo pipefail
           cd "$HOME/fox_12.1"
           export TOP="$HOME/fox_12.1"
           test -f "$TOP/build/make/core/envsetup.mk"
