@@ -70,13 +70,15 @@ jobs:
 
           echo "=== ENVSETUP ==="
           set +e
+          set -x
           source build/envsetup.sh
           envsetup_rc=$?
+          set +x
           set -e
           echo "ENVSETUP_RC=$envsetup_rc"
-          if [ "$envsetup_rc" -ne 0 ]; then
-            echo "envsetup.sh failed; printing shell/build context"
-            printf "TOP=%s\nANDROID_BUILD_TOP=%s\nBASH_VERSION=%s\n" "${TOP:-}" "${ANDROID_BUILD_TOP:-}" "${BASH_VERSION:-}"
+          printf "TOP=%s\nANDROID_BUILD_TOP=%s\nBASH_VERSION=%s\n" "${TOP:-}" "${ANDROID_BUILD_TOP:-}" "${BASH_VERSION:-}"
+          if ! declare -F lunch >/dev/null 2>&1; then
+            echo "ERROR: lunch function was not loaded by envsetup.sh"
             exit "$envsetup_rc"
           fi
 
@@ -118,7 +120,14 @@ jobs:
           cd "$HOME/fox_12.1"
           export TOP="$HOME/fox_12.1"
           test -f "$TOP/build/make/core/envsetup.mk"
+          set +e
+          set -x
           source "$TOP/build/envsetup.sh"
+          envsetup_rc=$?
+          set +x
+          set -e
+          echo "ENVSETUP_RC=$envsetup_rc"
+          declare -F lunch
           lunch omni_OP6505L1-eng
           mka recoveryimage 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
 
