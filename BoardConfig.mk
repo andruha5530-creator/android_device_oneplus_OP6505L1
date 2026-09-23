@@ -34,8 +34,6 @@ BOARD_USES_GENERIC_KERNEL_IMAGE := true
 BOARD_BOOT_HEADER_VERSION := 4
 BOARD_BOOTIMG_HEADER_VERSION := 4
 BOARD_KERNEL_PAGESIZE := 4096
-# The stock OP6505L1 recovery is a header-v4 ramdisk-only image.
-# Pass the header version explicitly to the recovery mkbootimg invocation.
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
 BOARD_MKBOOTIMG_ARGS += --pagesize $(BOARD_KERNEL_PAGESIZE)
 BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE := true
@@ -45,13 +43,11 @@ BOARD_RECOVERYIMAGE_PARTITION_SIZE := 104857600
 BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE := 100663296
 BOARD_DTBOIMG_PARTITION_SIZE := 25165824
 
-# OP6505L1 uses separate dynamic vendor/product/system_ext/odm partitions.
-# Setting the copy-out paths lets the Android build system derive the
-# corresponding image configuration without forcing a filesystem type.
+# OP6505L1 has a real standalone vendor partition.
+# Keep the standard Android copy-out names for the other logical partitions;
+# explicitly setting only vendor is required because BOARD_USES_VENDORIMAGE
+# is enabled by the device tree.
 TARGET_COPY_OUT_VENDOR := vendor
-TARGET_COPY_OUT_ODM := odm
-TARGET_COPY_OUT_PRODUCT := product
-TARGET_COPY_OUT_SYSTEM_EXT := system_ext
 
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
