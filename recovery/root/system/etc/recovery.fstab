@@ -1,8 +1,40 @@
 # OnePlus Nord CE 6 (OP6505L1)
-# Dedicated recovery partition / Android 14+ / A/B
+# Stock-derived Android 16 recovery fstab.
 
-/dev/block/by-name/boot /boot emmc defaults,slotselect
-/dev/block/by-name/recovery /recovery emmc defaults,slotselect
-/dev/block/by-name/vendor_boot /vendor_boot emmc defaults,slotselect
-/dev/block/by-name/metadata /metadata ext4 rw
-/dev/block/by-name/userdata /data f2fs rw,discard,fsync_mode=nobarrier,inlinecrypt,fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized+wrappedkey_v0,keydirectory=/metadata/vold/metadata_encryption,metadata_encryption=aes-256-xts:wrappedkey_v0
+system /system ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount
+system /system erofs ro wait,slotselect,logical,first_stage_mount
+system_ext /system_ext ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount
+system_ext /system_ext erofs ro wait,slotselect,logical,first_stage_mount
+product /product ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount
+product /product erofs ro wait,slotselect,logical,first_stage_mount
+vendor /vendor ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount
+vendor /vendor erofs ro wait,slotselect,logical,first_stage_mount
+odm /odm ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount
+odm /odm erofs ro wait,slotselect,logical,first_stage_mount
+my_product /my_product ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount
+my_product /my_product erofs ro wait,slotselect,logical,first_stage_mount
+my_company /my_company ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount,nofail
+my_company /my_company erofs ro wait,slotselect,logical,first_stage_mount,nofail
+my_carrier /my_carrier ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount,nofail
+my_carrier /my_carrier erofs ro wait,slotselect,logical,first_stage_mount,nofail
+my_region /my_region ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount,nofail
+my_region /my_region erofs ro wait,slotselect,logical,first_stage_mount,nofail
+my_bigball /my_bigball ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount,nofail
+my_bigball /my_bigball erofs ro wait,slotselect,logical,first_stage_mount,nofail
+my_heytap /my_heytap ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount,nofail
+my_heytap /my_heytap erofs ro wait,slotselect,logical,first_stage_mount,nofail
+my_stock /my_stock ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount,nofail
+my_stock /my_stock erofs ro wait,slotselect,logical,first_stage_mount,nofail
+my_preload /my_preload ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount,nofail
+my_preload /my_preload erofs ro wait,slotselect,logical,first_stage_mount,nofail
+my_manifest /my_manifest ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount,nofail
+my_manifest /my_manifest erofs ro wait,slotselect,logical,first_stage_mount,nofail
+my_engineering /my_engineering ext4 ro,barrier=1 wait,slotselect,logical,first_stage_mount
+my_engineering /my_engineering erofs ro wait,slotselect,logical,first_stage_mount
+
+/dev/block/bootdevice/by-name/metadata /metadata f2fs noatime,nosuid,nodev,discard wait,formattable,first_stage_mount
+/dev/block/bootdevice/by-name/userdata /data f2fs noatime,nosuid,nodev,discard,inlinecrypt,reserve_root=32768,resgid=1065,fsync_mode=nobarrier latemount,resize,wait,check,formattable,fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized+wrappedkey_v0,keydirectory=/metadata/vold/metadata_encryption,metadata_encryption=aes-256-xts:wrappedkey_v0,quota,reservedsize=128M,checkpoint=fs
+
+/dev/block/bootdevice/by-name/boot /boot emmc defaults defaults
+/dev/block/bootdevice/by-name/recovery /recovery emmc defaults defaults
+/dev/block/bootdevice/by-name/vendor_boot /vendor_boot emmc defaults defaults
