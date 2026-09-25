@@ -1,4 +1,5 @@
-# OP6505L1 stock recovery early-init hooks, Android 16.
+# OP6505L1 stock recovery Qualcomm/GKI hooks, Android 16.
+# The kernel and Qualcomm USB controller are supplied by vendor_boot.
 
 on init
     write /sys/class/backlight/panel0-backlight/brightness 200
@@ -6,9 +7,9 @@ on init
 
 on property:ro.boot.usbcontroller=*
     setprop sys.usb.controller ${ro.boot.usbcontroller}
-    wait /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode
+    wait /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode 5
     write /sys/bus/platform/devices/${ro.boot.usb.dwc3_msm:-a600000.ssusb}/mode peripheral
-    wait /sys/class/udc/${ro.boot.usbcontroller} 1
+    wait /sys/class/udc/${ro.boot.usbcontroller} 5
 
 on fs
     wait /dev/block/platform/soc/${ro.boot.bootdevice}
