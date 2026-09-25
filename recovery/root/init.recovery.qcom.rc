@@ -1,7 +1,9 @@
 # OP6505L1 stock recovery Qualcomm/GKI hooks, Android 16.
 # The kernel and Qualcomm USB controller are supplied by vendor_boot.
+# Boot/health HALs are built into the recovery ramdisk.
 
 on init
+    start vendor.boot-qti
     write /sys/class/backlight/panel0-backlight/brightness 200
     setprop sys.usb.configfs 1
 
