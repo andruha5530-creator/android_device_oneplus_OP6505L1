@@ -133,10 +133,71 @@ jobs:
 
       - name: Verify recovery image
         run: |
+          set -euo pipefail
           OUT="$HOME/fox_12.1/out/target/product/OP6505L1"
-          test -f "$OUT/recovery.img"
-          ls -lh "$OUT/recovery.img"
-          file "$OUT/recovery.img"
+          IMG="$OUT/recovery.img"
+
+          test -f "$IMG"
+          ls -lh "$IMG"
+          file "$IMG"
+
+          echo "=== RECOVERY SHA-256 ==="
+          sha256sum "$IMG"
+
+          echo "=== RECOVERY BOOT HEADER ==="
+          python3 - "$IMG" <<'PY'
+          import struct
+          import sys
+
+          path = sys.argv[1]
+          with open(path, "rb") as f:
+              data = f.read(4096)
+
+          if data[:8] != b"ANDROID!":
+              raise SystemExit("ERROR: invalid Android boot image magic")
+
+          kernel_size = struct.unpack_from("<I", data, 8)[0]
+          ramdisk_size = struct.unpack_from("<I", data, 16)[0]
+          page_size = struct.unpack_from("<I", data, 36)[0]
+          header_version = struct.unpack_from("<I", data, 40)[0]
+
+          print(f"kernel_size={kernel_size}")
+          print(f"ramdisk_size={ramdisk_size}")
+          print(f"page_size={page_size}")
+          print(f"header_version={header_version}")
+
+          if header_version != 4:
+              raise SystemExit("ERROR: recovery header is not v4")
+          if page_size != 4096:
+              raise SystemExit("ERROR: unexpected recovery page size")
+          if kernel_size != 0:
+              raise SystemExit("ERROR: recovery unexpectedly contains a kernel")
+          if ramdisk_size == 0:
+              raise SystemExit("ERROR: recovery ramdisk is empty")
+          PY
+
+          echo "=== RECOVERY PARTITION SIZE CHECK ==="
+          SIZE="$(stat -c '%s' "$IMG")"
+          MAX_SIZE=104857600
+          echo "recovery.img=$SIZE bytes"
+          test "$SIZE" -le "$MAX_SIZE"
+
+          echo "=== AVB FOOTER CHECK ==="
+          python3 - "$IMG" <<'PY'
+          import sys
+
+          path = sys.argv[1]
+          with open(path, "rb") as f:
+              f.seek(0, 2)
+              size = f.tell()
+              f.seek(max(0, size - 256))
+              tail = f.read(256)
+
+          if b"AVBf" in tail:
+              print("AVB footer present")
+          else:
+              print("AVB footer absent (OEM signing is not reproduced by this build)")
+          PY
 
       - name: Upload recovery
         uses: actions/upload-artifact@v4
